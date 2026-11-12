@@ -326,7 +326,7 @@
 
   // ---------- Registration ----------
   const api = {
-    id: 'checkers',
+    id: 'indian-checkers',
     name: 'Indian Checkers',
     t: 'Indian Checkers',
     i: '🔴',
