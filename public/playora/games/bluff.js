@@ -182,7 +182,7 @@
     return 'style="--hand-row:' + wideRow + ';--hand-column:' + wideColumn +
       ';--mobile-row:' + mobileRow + ';--mobile-column:' + mobileColumn + '"';
   }
-  function seat(i) {
+  function localSeat(i) {
     var p = G.players[i], on = G.phase !== 'over' && G.focus === i, st = '';
     if (G.phase === 'play' && G.turn === i) st = 'to play';
     else if ((G.phase === 'call' || G.phase === 'ask') && G.last) st = G.last.p === i ? 'just played' : (on ? 'deciding\u2026' : '');
@@ -202,7 +202,7 @@
     var me = G.players[0], myTurn = G.phase === 'play' && G.turn === 0, asking = G.phase === 'ask', n = G.sel.length;
     var show = G.last && (G.phase === 'call' || G.phase === 'ask' || G.phase === 'reveal');
     h += '<div class="bar"><b class="logo">Bluff</b><span>Pile: ' + cards(G.pile.length) + '</span><button class="btn" data-a="new">New game</button></div>' +
-      '<div class="table">' + seat(2) + seat(1) + '<div class="mid"><div class="need">Claim <b>' + RK[G.rank] + '</b></div><div class="pilebox">';
+      '<div class="table">' + localSeat(2) + localSeat(1) + '<div class="mid"><div class="need">Claim <b>' + RK[G.rank] + '</b></div><div class="pilebox">';
     if (G.pile.length) {
       h += '<div class="stack">';
       for (var k = 0; k < Math.min(4, Math.ceil(G.pile.length / 4)); k++) h += '<div class="card back p' + k + '"></div>';
@@ -212,7 +212,7 @@
     if (G.phase === 'reveal') {
       h += '<div class="rev">' + G.last.cards.map(function (c) { return cardHTML(c, c.r === G.last.rank ? '' : ' bad'); }).join('') + '</div>';
     }
-    h += '</div>' + seat(3) + '</div><div class="msg">' + G.msg + '<small>' +
+    h += '</div>' + localSeat(3) + '</div><div class="msg">' + G.msg + '<small>' +
       (myTurn ? 'Your turn. Choose 1 to 4 cards to put down.' : asking ? 'Do you think they are lying?' : '') + '</small></div><div class="acts">';
     if (myTurn) h += '<button class="btn" data-a="put"' + (n ? '' : ' disabled') + '>' + (n ? 'Put down ' + cards(n) + ' as ' + RK[G.rank] : 'Select cards') + '</button>';
     if (asking) h += '<button class="btn red" data-a="call">Call bluff!</button><button class="btn alt" data-a="pass">Let it go</button>';
@@ -410,7 +410,7 @@
   }
   function roomBot() {
     var index = S.t, player = S.players[index];
-    if (!player || !player.bot || (typeof seat !== 'undefined' && index === seat) || S.over) return null;
+    if (!player || !player.bot || S.over) return null;
     if (S.phase === 'play') {
       var wanted = S.rank + 1;
       var own = player.hand.filter(function (card) { return card.r === wanted; });
@@ -559,6 +559,7 @@
 #room #bd .bl-room .bl .setup-choice:hover{transform:translateY(-.25rem);border-color:#ffd45c}
 #room #bd .bl-room .bl{box-sizing:border-box;padding-bottom:calc(5vh + env(safe-area-inset-bottom,0px))}
 @media(max-width:1250px){#room #bd .bl-room .bl{--w:clamp(36px,min(8vw,calc((100vw - 56px)/11)),92px)}}
+@media(min-width:601px) and (max-height:700px){#room #bd .bl-room .bl{--w:clamp(32px,min(5vw,10vh),58px)}#room #bd .bl-room .bar{padding:4px 10px}#room #bd .bl-room .table{flex:1 1 0;grid-template-rows:auto minmax(0,1fr)}#room #bd .bl-room .seat{padding:3px 6px}#room #bd .bl-room .mid{gap:4px}#room #bd .bl-room .need b{font-size:calc(var(--w)*.6)}#room #bd .bl-room .msg{min-height:2.4em;padding:2px 8px;font-size:12px}#room #bd .bl-room .acts{min-height:36px}#room #bd .bl-room .hand{grid-auto-rows:calc(var(--w)*.78);padding:8px 8px calc(6px + var(--w)*.25)}}
 @media(max-width:600px){#room #bd .bl-room .bl{--w:clamp(36px,min(18vw,calc((100vw - 40px)/7)),76px)}#room #bd .bl-room .bl .setup-choice{width:3.6rem;font-size:1.35rem}#room #bd .bl-room .hand{grid-template-columns:repeat(20,minmax(0,1fr));grid-template-rows:none;grid-auto-rows:calc(var(--w)*.95)}#room #bd .bl-room .hand button.card{grid-column:span 2}#room #bd .bl-room .hand button.card[style*="--mobile-row"]{grid-row:var(--mobile-row);grid-column:var(--mobile-column) / span 2}#room #bd .bl-room .acts{gap:6px;padding:0 8px}#room #bd .bl-room .acts button.btn{width:auto;min-width:0;max-width:100%;flex:1 1 0;margin:0;padding:10px 6px;font-size:clamp(12px,3.5vw,14px);white-space:normal}}
 @media(max-width:520px){#room #bd .bl-room .hand{padding-bottom:calc(32px + env(safe-area-inset-bottom,0px))}}
 @media(max-width:520px) and (max-height:700px){#room #bd .bl-room .bl{--w:clamp(36px,min(12vw,12vh),46px)}#room #bd .bl-room .hand{padding-top:24px}}
@@ -602,6 +603,7 @@
     '.ovl h1{margin:0;font-size:clamp(36px,9vw,64px);color:#ffd45c}.ovl p{margin:0;max-width:40ch;line-height:1.45}' +
     '.btn:focus-visible,.card:focus-visible{outline:3px solid #fff;outline-offset:3px}' +
     '@media(max-width:1250px){.bl{--w:clamp(36px,min(8vw,calc((100vw - 56px)/11)),92px)}}' +
+    '@media(min-width:601px) and (max-height:700px){.bl{--w:clamp(32px,min(5vw,10vh),58px)}.bar{padding:4px 10px}.table{flex:1 1 0;grid-template-rows:auto minmax(0,1fr)}.seat{padding:3px 6px}.mid{gap:4px}.need b{font-size:calc(var(--w)*.6)}.msg{min-height:2.4em;padding:2px 8px;font-size:12px}.acts{min-height:36px}.hand{grid-auto-rows:calc(var(--w)*.78);padding:8px 8px calc(6px + var(--w)*.25)}}' +
     '@media(max-width:600px){.bl{--w:clamp(36px,min(18vw,calc((100vw - 40px)/7)),76px);box-sizing:border-box;padding-bottom:5vh}.setup-choice{width:3.6rem;font-size:1.35rem}.hand{grid-template-columns:repeat(20,minmax(0,1fr));order:1}.hand .card[style*="--mobile-row"]{grid-row:var(--mobile-row);grid-column:var(--mobile-column) / span 2}.msg{order:2;margin-top:8px}.acts{order:3}.mid{grid-template-columns:minmax(0,1fr);grid-template-areas:"need" "pile" "claim" "rev"}.need{display:flex;align-items:center;justify-content:center;gap:4px}.need b{display:inline-block;margin:0;font-size:calc(var(--w)*.55)}}' +
     '@keyframes card-reveal{from{opacity:0;translate:0 -18px;rotate:y 80deg;scale:.92}to{opacity:1;translate:0 0;rotate:none;scale:1}}' +
     '@media (prefers-reduced-motion:no-preference){.hand .card{transition:transform .2s cubic-bezier(.2,.8,.2,1)}.rev .card{animation:card-reveal .38s cubic-bezier(.2,.8,.2,1) both}.stack .card:last-child{animation:card-reveal .32s ease-out both}}' +

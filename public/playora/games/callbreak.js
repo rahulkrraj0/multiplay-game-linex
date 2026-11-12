@@ -198,13 +198,17 @@
       index(label === '10' ? ' ten' : '') + face + index((label === '10' ? ' ten' : '') + ' br') + '</' + tag.split(' ')[0] + '>';
   }
   function handGridPosition(index, count) {
-    var columns = 8, row = Math.ceil(count / columns), remainder = count % columns || columns;
-    var lastRowStart = count - remainder;
-    if (index < lastRowStart || remainder === columns) return '';
-    var startColumn = Math.floor((columns * 2 - remainder * 2) / 2) + 1;
-    return 'style="--hand-row:' + row + ';--hand-column:' + (startColumn + (index - lastRowStart) * 2) + '"';
+    var wideCapacity = 13, mobileCapacity = 8, wideColumns = 30, mobileColumns = 20;
+    var wideRow = Math.floor(index / wideCapacity) + 1, wideStart = (wideRow - 1) * wideCapacity;
+    var wideCount = Math.min(wideCapacity, count - wideStart);
+    var wideColumn = Math.floor((wideColumns - wideCount * 2) / 2) + 1 + (index - wideStart) * 2;
+    var mobileRow = Math.floor(index / mobileCapacity) + 1, mobileStart = (mobileRow - 1) * mobileCapacity;
+    var mobileCount = Math.min(mobileCapacity, count - mobileStart);
+    var mobileColumn = Math.floor((mobileColumns - mobileCount * 2) / 2) + 1 + (index - mobileStart) * 2;
+    return 'style="--wide-row:' + wideRow + ';--wide-column:' + wideColumn +
+      ';--mobile-row:' + mobileRow + ';--mobile-column:' + mobileColumn + '"';
   }
-  function seat(i) {
+  function localSeat(i) {
     var p = G.players[i], on = (G.phase === 'bid' || G.phase === 'play') && G.turn === i && !G.collect;
     var st = p.bid ? 'bid ' + p.bid + ', won ' + p.tricks : (G.phase === 'bid' ? (on ? 'bidding\u2026' : 'waiting') : '');
     return '<div class="seat s' + i + (on ? ' on' : '') + '"><div class="card back mini">' + p.hand.length + '</div><span class="nm">' + p.name +
@@ -222,9 +226,9 @@
     var me = G.players[0], myTurn = G.phase === 'play' && G.turn === 0 && !G.collect, bidding = G.phase === 'bid' && G.turn === 0;
     var L = myTurn ? legal(me.hand, G.trick) : [];
     h += '<div class="bar"><b class="logo">Call Break</b><span>Round ' + G.round + ' of ' + ROUNDS + ', spades \u2660 are trump</span><button class="btn" data-a="new">New game</button></div>' +
-      '<div class="table">' + seat(2) + seat(1) + '<div class="trick">';
+      '<div class="table">' + localSeat(2) + localSeat(1) + '<div class="trick">';
     G.trick.forEach(function (t, i) { h += cardHTML(t.card, ' t' + t.p + (G.collect && G.win === t.p ? ' win' : '') + (i === G.trick.length - 1 ? ' fresh' : '')); });
-    h += '</div>' + seat(3);
+    h += '</div>' + localSeat(3);
     if (bidding) {
       h += '<div class="bidbox"><p>Your bid: how many tricks will you win?</p><div class="bids">';
       for (var n = 1; n <= 13; n++) h += '<button class="btn" data-a="bid" data-v="' + n + '">' + n + '</button>';
@@ -325,7 +329,7 @@
       };
       return S;
     }
-    var playerCount = online ? Math.max(4, Number(np) || 4) : 4;
+    var playerCount = online ? Math.max(ids.length, Math.min(4, Number(np) || 4)) : 4;
     var rng = Math.floor(Math.random() * 4294967296) >>> 0;
     S = {
       phase: 'bid', round: 1, dealer: playerCount - 2, trick: [], collect: false, turn: 0, t: 0, lead: 0,
@@ -474,11 +478,11 @@
 #room #bd .cb .hand{padding-top:28px;padding-bottom:20px;margin-top:5px}
 #room #bd .cb .hand button.card+button.card{margin-left:calc(var(--w)*-.45)}
 #room #bd .cb .hand{width:100%;min-width:0;max-width:1160px;margin-left:auto;margin-right:auto}
-#room #bd .cb .room-action{order:1}#room #bd .cb .hand{order:2}#room #bd .cb .msg{order:3;margin-top:8px}#room #bd .cb .mine{order:4}
+#room #bd .cb .collect-action{order:1;align-self:center;flex:none;position:relative;z-index:6;white-space:nowrap;margin:0 auto 4px}#room #bd .cb .hand{order:2}#room #bd .cb .msg{order:3;margin-top:8px}#room #bd .cb .mine{order:4}
 #room #bd .cb{box-sizing:border-box;padding-bottom:calc(5vh + env(safe-area-inset-bottom,0px))}
 #room #bd .cb .bar .logo{display:none}
-@media(min-width:601px){#room #bd .cb .hand{flex-wrap:wrap;justify-content:center;overflow-x:hidden;overflow-y:hidden}#room #bd .cb .hand .card:first-child{margin-left:0}#room #bd .cb .hand .card:last-child{margin-right:0}}
-@media(max-width:600px){#room #bd .cb{--w:clamp(36px,min(18vw,calc((100vw - 40px)/8)),76px)}#room #bd .cb .hand{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));grid-template-rows:none;grid-auto-rows:calc(var(--w)*.95);align-content:center;justify-items:center;gap:0;overflow:visible;padding:20px 12px calc(10px + var(--w)*.5 + env(safe-area-inset-bottom,0px))}#room #bd .cb .hand button.card{margin:0}#room #bd .cb .hand{grid-template-columns:repeat(16,minmax(0,1fr))}#room #bd .cb .hand button.card+button.card{margin-left:0}#room #bd .cb{padding-bottom:5vh}#room #bd .cb .hand button.card{grid-column:span 2}#room #bd .cb .hand button.card[style*="--hand-row"]{grid-row:var(--hand-row);grid-column:var(--hand-column) / span 2;translate:calc(var(--w)*.3) 0}}
+@media(min-width:601px){#room #bd .cb{--w:clamp(36px,min(8vw,calc((100vw - 56px)/11)),92px)}#room #bd .cb .hand{display:grid;grid-template-columns:repeat(30,minmax(0,1fr));grid-auto-rows:calc(var(--w)*.95);align-content:center;justify-items:center;overflow-x:hidden;overflow-y:hidden;padding:28px 8px calc(10px + var(--w)*.5)}#room #bd .cb .hand .card{grid-column:span 2;width:var(--w);height:calc(var(--w)*1.45);justify-self:center;margin:0}#room #bd .cb .hand .card[style*="--wide-row"]{grid-row:var(--wide-row);grid-column:var(--wide-column) / span 2}}
+@media(max-width:600px){#room #bd .cb{--w:clamp(36px,min(18vw,calc((100vw - 40px)/7)),76px)}#room #bd .cb .hand{display:grid;grid-template-columns:repeat(20,minmax(0,1fr));grid-template-rows:none;grid-auto-rows:calc(var(--w)*.95);align-content:center;justify-items:center;gap:0;overflow:visible;padding:28px 8px calc(10px + var(--w)*.5 + env(safe-area-inset-bottom,0px))}#room #bd .cb .hand button.card{margin:0}#room #bd .cb .hand button.card+button.card{margin-left:0}#room #bd .cb{padding-bottom:5vh}#room #bd .cb .hand button.card{grid-column:span 2}#room #bd .cb .hand button.card[style*="--mobile-row"]{grid-row:var(--mobile-row);grid-column:var(--mobile-column) / span 2}}
 @media(max-width:520px){#room #bd .cb .hand{padding-bottom:calc(32px + env(safe-area-inset-bottom,0px))}}
 @media(max-width:520px) and (max-height:700px){#room #bd .cb{--w:clamp(36px,min(12vw,12vh),46px)}#room #bd .cb .hand{padding-top:24px}#room #bd .cb .bidbox{top:0;transform:translateX(-50%);z-index:30}}` +
         `@media(min-width:601px) and (max-height:520px) and (orientation:landscape){#room #bd .cb{--w:clamp(36px,min(7.5vw,13vh,calc((100vw - 40px)/14.75)),58px)}}` +
@@ -526,7 +530,9 @@
       (active ? 'Start the next round.' : S.players[S.t].name + ' can start the next round.') :
       S.collect ? (active ? 'Collect the trick.' : S.players[S.t].name + ' won the trick.') :
       active ? 'Your turn.' : S.players[S.t].name + (S.phase === 'bid' ? ' is bidding…' : ' is playing…');
-    html += '</div><div class="msg">' + roomEscape(S.msg || '') + '<small>' + roomEscape(hint) +
+    html += '</div>' + (active && S.collect ?
+      '<button class="btn collect-action" data-m="collect">Collect trick</button>' : '') +
+      '<div class="msg">' + roomEscape(S.msg || '') + '<small>' + roomEscape(hint) +
       '</small></div><div class="mine">' + (player ? roomEscape(player.name) + ': ' +
         (player.bid == null ? 'no bid yet' : 'bid ' + player.bid + ', won ' + player.tricks) : 'Waiting for your turn') +
       '</div><div class="hand">';
@@ -540,7 +546,6 @@
         (allowed ? 'data-m="card:' + card.id + '"' : '') + ' ' + handGridPosition(index, hand.length));
     });
     html += '</div>';
-    if (active && S.collect) html += '<div class="room-action"><button class="btn" data-m="collect">Collect trick</button></div>';
     if (S.phase === 'roundend') {
       var ranked = S.players.slice().sort(function (a, b) { return b.total - a.total; });
       html += '<div class="ovl"><h1>' + (S.over ? roomEscape(ranked[0].name) + ' wins!' : 'Round ' + S.round + ' done') +
@@ -660,7 +665,7 @@
   var api = {
     id: 'callbreak', name: 'Call Break', t: 'Call Break', i: '♠️',
     d: 'Bid for tricks, follow suit, and use spades as trump. Play with 2–4 total players.',
-    minPlayers: 2, playerCountMin: 4, maxPlayers: 4, max: 4, cat: 'classic strategy', tag: 'Bid & trump',
+    minPlayers: 2, playerCountMin: 2, maxPlayers: 4, max: 4, cat: 'classic strategy', tag: 'Bid & trump',
     diff: 'Medium', art: 'art-cards', logo: 'callbreak.svg',
     init: roomInit, valid: roomValid, apply: roomApply, bot: roomBot, draw: roomDraw, click: roomClick,
     mount: mount, start: start, _t: { get G() { return G; }, botBid: botBid, botPlay: botPlay, resolve: resolve, next: next, legal: legal },
