@@ -338,7 +338,7 @@
     tag: 'Jump & capture',
     diff: 'Easy to learn',
     art: 'art-chess',
-    logo: 'checkers.svg',
+    logo: 'icheckers.svg',
     hostedUI: true,
     n: ['Red', 'Black'],
     init(previousState) {
