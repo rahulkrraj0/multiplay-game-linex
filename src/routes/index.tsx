@@ -8,9 +8,10 @@ import { canonicalUrl } from "../playora/seo-config";
 const rootCanonical = canonicalUrl("/");
 
 export const Route = createFileRoute("/")({
-  validateSearch: (search: Record<string, unknown>) => ({
-    room: typeof search.room === "string" ? search.room : "",
-  }),
+  validateSearch: (search: Record<string, unknown>) => {
+    const room = typeof search.room === "string" ? search.room.trim() : "";
+    return room ? { room } : {};
+  },
   head: () => ({
     links: rootCanonical ? [{ rel: "canonical", href: rootCanonical }] : [],
   }),
@@ -145,7 +146,7 @@ function bootScripts() {
 
 function Home() {
   const { room } = Route.useSearch();
-  const inviteCode = getInviteRoomCode(room);
+  const inviteCode = getInviteRoomCode(room ?? "");
   const pageMarkup = inviteCode
     ? markup
         .replace('id="inviteCode"></strong>', `id="inviteCode">${inviteCode}</strong>`)
@@ -154,6 +155,15 @@ function Home() {
 
   useEffect(() => {
     let cancel = false;
+    const currentUrl = new URL(window.location.href);
+    if (currentUrl.searchParams.has("room") && !currentUrl.searchParams.get("room")?.trim()) {
+      currentUrl.searchParams.delete("room");
+      window.history.replaceState(
+        window.history.state,
+        "",
+        `${currentUrl.pathname}${currentUrl.search}${currentUrl.hash}`,
+      );
+    }
     if (!inviteCode) initializeStaticAdSenseSlots();
     const timer = window.setTimeout(() => {
       if (cancel) return;
