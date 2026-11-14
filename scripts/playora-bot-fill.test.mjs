@@ -54,10 +54,11 @@ test("variable-seat online card games use exactly the selected seat count", () =
   }
 });
 
-test("four-seat trick games require four selected seats", () => {
+test("trick games allow the host to select any supported player count", () => {
   for (const file of ["callbreak.js", "spades.js"]) {
     const source = readFileSync(join(process.cwd(), "public", "playora", "games", file), "utf8");
-    assert.match(source, /minPlayers:\s*2,\s*playerCountMin:\s*4,\s*maxPlayers:\s*4/);
+    assert.match(source, /minPlayers:\s*2,\s*maxPlayers:\s*4,\s*max:\s*4/);
+    assert.doesNotMatch(source, /playerCountMin:\s*4/);
   }
 });
 

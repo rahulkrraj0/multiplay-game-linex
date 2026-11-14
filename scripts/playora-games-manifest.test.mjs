@@ -261,13 +261,17 @@ test("interactive cards in the new games keep their card dimensions in room UI",
   }
   assert.match(bluffSource, /#room #bd \.bl-room \.hand button\.card:first-child,#room #bd \.bl-room \.hand button\.card:last-child,#room #bd \.bl-room \.hand button\.card\+button\.card\{margin-left:0;margin-right:0\}/,
     "Bluff cards should use the grid layout without overlap margins");
-  for (const source of cardGameSources.slice(1, 5))
+  for (const source of [cardGameSources[1], cardGameSources[2], cardGameSources[4]])
     assert.match(source, /#room #bd \.(?:cb|ce-room|hr|sp-room) .*?hand button\.card\+button\.card\{margin-left:calc\(var\(--w\)\*-.45\)\}/,
       "standard card hands should retain their intended overlap");
-  assert.match(cardGameSources[3], /#room #bd \.hr \.hand\{display:flex;flex-wrap:wrap;justify-content:center;align-content:center;gap:4px 2px;overflow:hidden\}/,
-    "Hearts cards should wrap into centered rows instead of requiring horizontal scrolling");
-  assert.match(cardGameSources[3], /#room #bd \.hr \.hand button\.card:first-child,#room #bd \.hr \.hand button\.card:last-child,#room #bd \.hr \.hand button\.card\+button\.card\{margin:0\}/,
+  assert.match(cardGameSources[3], /@media\(max-width:600px\)\{#room #bd \.hr\{[^}]+\}#room #bd \.hr \.hand\{display:grid;grid-template-columns:repeat\(20,minmax\(0,1fr\)\);grid-auto-rows:calc\(var\(--w\)\*\.95\)/,
+    "Hearts should lay out cards in rows on mobile instead of requiring horizontal scrolling");
+  assert.match(cardGameSources[3], /@media\(min-width:601px\)\{#room #bd \.hr\{[^}]+\}#room #bd \.hr \.hand\{display:grid;grid-template-columns:repeat\(30,minmax\(0,1fr\)\);grid-auto-rows:calc\(var\(--w\)\*\.95\)/,
+    "Hearts should lay out cards in rows on desktop instead of requiring horizontal scrolling");
+  assert.match(cardGameSources[3], /#room #bd \.hr \.hand button\.card\+button\.card\{margin-left:0\}/,
     "Hearts cards should not overlap when arranged in rows");
+  assert.match(cardGameSources[3], /\.hr \.hand \.card\{grid-column:span 2;[^}]*margin:0\}/,
+    "Hearts grid cards should not retain hand overlap margins");
   assert.match(bluffSource, /#room #bd \.bl-room \.acts button\.btn\{width:auto;min-width:min\(220px,100%\);margin:0;padding:10px 24px\}/,
     "Bluff's single action button should be compact and centered like Poker's actions");
   assert.match(bluffSource, /\.hand\{display:grid;grid-template-columns:repeat\(30,minmax\(0,1fr\)\);grid-auto-rows:calc\(var\(--w\)\*\.95\)/,
@@ -448,7 +452,9 @@ test("Spades lets a local player choose the total player count", () => {
 
 test("Spades completes bot matches with each selected player count", () => {
   for (const count of [2, 3, 4]) {
-    const { game, context } = createGame("spades.js", { localBot: true, np: 1 });
+    const stableMath = Object.create(Math);
+    stableMath.random = () => 0.5;
+    const { game, context } = createGame("spades.js", { Math: stableMath, localBot: true, np: 1 });
     const state = game.init();
     context.S = state;
     game.apply({ type: "players", player: 0, count });
@@ -604,6 +610,158 @@ test("Checkers and UNO expose Playora multiplayer game actions", () => {
   const unoStyle = uno.styles.find((style) => style.id === "uno-game-style");
   assert.ok(unoStyle);
   assert.match(unoStyle.textContent, /#room \.uno \.card/);
+});
+
+test("every catalog card game initializes for online multiplayer seats", () => {
+  const catalog = JSON.parse(readFileSync(new URL("../public/playora/games/catalog.json", import.meta.url), "utf8"));
+  const cardGameFiles = [
+    "bluff.js", "callbreak.js", "crazyeights.js", "hearts.js", "joker-duel.js",
+    "poker-game.js", "rummy.js", "spades.js", "teenpatti.js", "uno.js",
+  ];
+
+  for (const file of cardGameFiles) {
+    const entry = catalog.find((game) => game.file === file);
+    assert.ok(entry, `${file} should be available in the catalog`);
+    assert.ok(entry.max >= 2, `${file} should support multiple players`);
+    const minPlayers = entry.min ?? 2;
+    const { game, context } = createGame(file, {
+      ids: ["host", "guest"],
+      seat: 0,
+      localBot: false,
+      gamePlayerNames: ["Host", "Guest", "Computer 1", "Computer 2", "Computer 3", "Computer 4"],
+      computerBadge: () => "",
+    });
+
+    assert.equal(typeof game.init, "function", `${file} should initialize for online play`);
+    assert.equal(typeof game.valid, "function", `${file} should validate online actions`);
+    assert.equal(typeof game.apply, "function", `${file} should apply synchronized actions`);
+    assert.equal(typeof game.draw, "function", `${file} should render an online game`);
+    for (let playerCount = minPlayers; playerCount <= entry.max; playerCount++) {
+      context.np = playerCount;
+      const state = game.init();
+      context.S = state;
+      const actualPlayerCount = Array.isArray(state.players)
+        ? state.players.length
+        : Number.isInteger(state.np)
+          ? state.np
+          : Array.isArray(state.h)
+            ? state.h.length
+            : null;
+
+      assert.equal(actualPlayerCount, playerCount, `${file} should initialize ${playerCount} selected seats`);
+      assert.equal(typeof game.draw()[0], "string", `${file} should render ${playerCount} selected seats`);
+    }
+  }
+});
+
+test("online trick games use the player count selected by the host", () => {
+  for (const file of ["callbreak.js", "spades.js"]) {
+    const { game, context } = createGame(file, {
+      ids: ["host", "guest"],
+      localBot: false,
+      gamePlayerNames: ["Host", "Guest", "Computer 1", "Computer 2"],
+    });
+
+    for (let playerCount = 2; playerCount <= 4; playerCount++) {
+      context.np = playerCount;
+      const state = game.init();
+      assert.equal(state.players.length, playerCount, `${file} should use ${playerCount} seats`);
+      assert.equal(state.players.filter((player) => player.bot).length, playerCount - 2, file);
+    }
+  }
+});
+
+test("Crazy Eights and Spades synchronize actions from hydrated online state", () => {
+  const deterministicMath = Object.create(Math);
+  deterministicMath.random = () => 0.5;
+
+  function createPeers(file, playerCount) {
+    const peers = ["host", "guest"].map((id, seat) => createGame(file, {
+      Math: deterministicMath,
+      ids: ["host", "guest"],
+      np: playerCount,
+      seat,
+      localBot: false,
+      gamePlayerNames: ["Host", "Guest", "Computer 1", "Computer 2"],
+    }));
+    const hostState = peers[0].game.init();
+    peers[0].context.S = hostState;
+    const guestState = JSON.parse(JSON.stringify(hostState));
+    peers[1].game.init();
+    assert.equal(typeof peers[0].game.setState, "function", `${file} should accept synchronized room state`);
+    peers[1].game.setState(guestState);
+    peers[1].context.S = guestState;
+    return { peers, states: [hostState, guestState] };
+  }
+
+  function dispatch(peers, states, action) {
+    for (const { game } of peers) {
+      assert.equal(game.valid(action), true, `${game.id} should accept the same online action`);
+      assert.equal(game.valid({ ...action, player: (action.player + 1) % states[0].players.length }), false,
+        `${game.id} should reject actions from the wrong turn`);
+      game.apply(action);
+    }
+    peers.forEach((peer, index) => { peer.context.S = states[index]; });
+    assert.equal(JSON.stringify(states[0]), JSON.stringify(states[1]),
+      `${peers[0].game.id} peers should have identical state after each action`);
+  }
+
+  function playable(card, state) {
+    const top = state.disc[state.disc.length - 1];
+    return card.r === 8 || card.s === state.color || card.r === top.r;
+  }
+
+  for (const playerCount of [2, 3, 4]) {
+    const { peers, states } = createPeers("crazyeights.js", playerCount);
+    for (let turn = 0; turn < 30 && !states[0].over; turn++) {
+      const state = states[0], player = state.players[state.t];
+      let action;
+      if (state.phase === "roundend") {
+        action = { type: "next", player: state.t };
+      } else {
+        const drawnCard = player.hand.find((card) => card.id === state.drawnId);
+        const options = drawnCard
+          ? (playable(drawnCard, state) ? [drawnCard] : [])
+          : player.hand.filter((card) => playable(card, state));
+        if (options.length) {
+          const card = options[0];
+          action = { type: "play", player: state.t, cardId: card.id, suit: card.r === 8 ? "S" : card.s };
+        } else if (state.stock.length || state.disc.length > 1) {
+          action = { type: "draw", player: state.t };
+        } else {
+          action = { type: "pass", player: state.t };
+        }
+      }
+      dispatch(peers, states, action);
+    }
+  }
+
+  for (const playerCount of [2, 3, 4]) {
+    const { peers, states } = createPeers("spades.js", playerCount);
+    for (let player = 0; player < playerCount; player++) {
+      dispatch(peers, states, { type: "bid", player: states[0].t, value: 0 });
+    }
+    assert.equal(states[0].phase, "play");
+    for (let player = 0; player < playerCount; player++) {
+      const state = states[0], hand = state.players[state.t].hand;
+      const leadSuit = state.trick.length ? state.trick[0].card.s : null;
+      const following = leadSuit ? hand.filter((card) => card.s === leadSuit) : [];
+      const nonSpades = hand.filter((card) => card.s !== "S");
+      const legal = following.length ? following :
+        !leadSuit && !state.broken && nonSpades.length ? nonSpades : hand;
+      dispatch(peers, states, { type: "play", player: state.t, cardId: legal[0].id });
+    }
+    assert.equal(states[0].collect, true);
+    dispatch(peers, states, { type: "collect", player: states[0].win });
+    assert.equal(states[0].collect, false);
+  }
+
+  const netSource = readFileSync(new URL("../public/playora/core/net.js", import.meta.url), "utf8");
+  assert.match(netSource, /function setNetGameState\(state\)\{S=state;if\(G&&typeof G\.setState==='function'\)G\.setState\(state\)\}/);
+  for (const stateExpression of ["m.st.S", "m.S", "JSON.parse(JSON.stringify(snapshot.S))"]) {
+    assert.ok(netSource.includes(`setNetGameState(${stateExpression})`),
+      `online state restoration should hydrate the game module with ${stateExpression}`);
+  }
 });
 
 test("UNO animates a newly drawn card and a card played to the discard pile", () => {

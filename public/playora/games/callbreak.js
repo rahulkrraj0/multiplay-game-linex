@@ -665,7 +665,7 @@
   var api = {
     id: 'callbreak', name: 'Call Break', t: 'Call Break', i: '♠️',
     d: 'Bid for tricks, follow suit, and use spades as trump. Play with 2–4 total players.',
-    minPlayers: 2, playerCountMin: 2, maxPlayers: 4, max: 4, cat: 'classic strategy', tag: 'Bid & trump',
+    minPlayers: 2, maxPlayers: 4, max: 4, cat: 'classic strategy', tag: 'Bid & trump',
     diff: 'Medium', art: 'art-cards', logo: 'callbreak.svg',
     init: roomInit, valid: roomValid, apply: roomApply, bot: roomBot, draw: roomDraw, click: roomClick,
     mount: mount, start: start, _t: { get G() { return G; }, botBid: botBid, botPlay: botPlay, resolve: resolve, next: next, legal: legal },

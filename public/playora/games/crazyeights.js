@@ -337,6 +337,11 @@
     roomNewRound();
     return S;
   }
+  function roomSetState(state) {
+    S = state;
+    roomAnimationSeq = state && state.animationSeq || 0;
+    roomWildCard = null;
+  }
   function roomNewRound() {
     S.stock = roomShuffle(deck());
     S.disc = [];
@@ -668,7 +673,7 @@
     d: 'Match the discard pile by suit or rank, play wild eights, and race to empty your hand.',
     minPlayers: 2, maxPlayers: 4, max: 4, cat: 'classic casual', tag: 'Wild card classic',
     diff: 'Easy to learn', art: 'art-cards', logo: 'crazy-eights.svg',
-    init: roomInit, setState: function (state) { S = state; }, valid: roomValid, apply: roomApply, bot: roomBot, draw: roomDraw, click: roomClick,
+    init: roomInit, setState: roomSetState, valid: roomValid, apply: roomApply, bot: roomBot, draw: roomDraw, click: roomClick,
     soundEvents: roomSoundEvents,
     mount: mount, start: start, _t: { get G() { return G; }, get roomState() { return S; }, roomInit: roomInit, roomValid: roomValid, roomApply: roomApply, roomBot: roomBot, botMove: botMove, newRound: newRound, matchWinner: matchWinner },
   };

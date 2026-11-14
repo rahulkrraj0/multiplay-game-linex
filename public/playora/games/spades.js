@@ -362,6 +362,10 @@
     roomNewRound();
     return S;
   }
+  function roomSetState(state) {
+    S = state;
+    roomAnimationSeq = state && state.animationSeq || 0;
+  }
   function roomLegal(hand, trick, broken) {
     if (!trick.length) {
       var nonSpades = hand.filter(function (card) { return card.s !== 'S'; });
@@ -773,9 +777,9 @@
   var api = {
     id: 'spades', name: 'Spades', t: 'Spades', i: '♠️',
     d: 'Play with 2 to 4 players: bid solo with 2 or 3, or partner up with 4. Follow suit and use spades as trump.',
-    minPlayers: 2, playerCountMin: 2, maxPlayers: 4, max: 4, cat: 'classic strategy', tag: 'Bid & team up',
+    minPlayers: 2, maxPlayers: 4, max: 4, cat: 'classic strategy', tag: 'Bid & team up',
     diff: 'Medium', art: 'art-cards', logo: 'spades.svg',
-    init: roomInit, valid: roomValid, apply: roomApply, bot: roomBot, draw: roomDraw, click: roomClick,
+    init: roomInit, setState: roomSetState, valid: roomValid, apply: roomApply, bot: roomBot, draw: roomDraw, click: roomClick,
     soundEvents: roomSoundEvents,
     mount: mount, start: start, _t: { get G() { return G; }, botBid: botBid, botPlay: botPlay, resolve: resolve, next: next, legal: legal },
   };

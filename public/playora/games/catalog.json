@@ -59,7 +59,7 @@
     "id": "callbreak",
     "i": "♠️",
     "t": "Call Break",
-    "d": "Bid for tricks, follow suit, and use spades as trump in this four-player card game.",
+    "d": "Bid for tricks, follow suit, and use spades as trump with 2–4 players.",
     "min": 2,
     "max": 4,
     "cat": "classic strategy",

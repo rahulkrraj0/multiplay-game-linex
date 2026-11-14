@@ -11,7 +11,7 @@ function cancelDisplayName(){pendingNameActions.length=0;$('displayNameDialog').
 function requireDisplayName(action){if(displayName)return true;ensureDisplayName(action);return false}
 const nameForm=$('displayNameForm');nameForm.addEventListener('submit',saveDisplayName);$('cancelDisplayName').onclick=cancelDisplayName;
 function cleanGamePlayerNames(names){return Array.isArray(names)?names.map((name,index)=>cleanPlayerName(name)||'Player '+(index+1)):[]}
-const CARD_GAME_IDS=new Set(['poker','rummy','teenpatti','joker-duel','bluff','callbreak','crazyeights','hearts','spades']);
+const CARD_GAME_IDS=new Set(['poker','rummy','teenpatti','joker-duel','bluff','callbreak','crazyeights','hearts','spades','uno']);
 const COMPUTER_NAMES=['Aarav','Arjun','Kiran','Rohan','Rahul','Nisha','Meera','Priya','Kabir','Ishaan','Vikram','Ananya','Sanjay','Devika','Neelam','Manish','Akshay','Harish','Varsha','Aditi','Pooja','Suresh','Karthik','Nandini','Ritika','Shreya'];
 function randomComputerName(){return COMPUTER_NAMES[Math.floor(Math.random()*COMPUTER_NAMES.length)]}
 const isComputerOpponent=t=>localBot&&t!==seat&&CARD_GAME_IDS.has(G&&G.id);

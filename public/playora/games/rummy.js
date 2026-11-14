@@ -918,13 +918,13 @@
         : opts && typeof opts === "object" ? (opts.players || opts.n || opts.count || opts.np) : 0;
       const hinted = Number.isInteger(raw) && raw >= MIN_P && raw <= MAX_P ? raw
         : typeof ids !== "undefined" && ids.length && Number.isInteger(np) && np >= MIN_P && np <= MAX_P ? np : 0;
-      const np = hinted || 2;
+      const playerCount = hinted || 2;
       return {
         ph: hinted ? "deal" : "setup", t: 0, over: 0, msg: "", seq: 0,
-        np, dealer: 0, hn: 1, rc: 0, took: null,
+        np: playerCount, dealer: 0, hn: 1, rc: 0, took: null,
         stock: [], disc: [], mel: [],
-        h: Array.from({ length: np }, () => []),
-        sc: Array(np).fill(0),
+        h: Array.from({ length: playerCount }, () => []),
+        sc: Array(playerCount).fill(0),
         log: [], lh: null, last: null,
       };
     },
