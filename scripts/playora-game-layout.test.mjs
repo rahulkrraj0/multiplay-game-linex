@@ -143,6 +143,15 @@ test("Spades hand cards scale down on narrow and short mobile viewports", () => 
   assert.match(spadesSource, /@media\(max-height:520px\)\{#room #bd \.sp-room \.sp\{--w:clamp\(32px,13vh,56px\)/);
 });
 
+test("Spades hands wrap and center card rows like Bluff", () => {
+  assert.match(spadesSource, /grid-template-columns:repeat\(30,minmax\(0,1fr\)\);grid-auto-rows:calc\(var\(--w\)\*\.95\);align-content:center;justify-items:center/);
+  assert.match(spadesSource, /\.sp-room \.hand \.card\{grid-column:span 2;justify-self:center;margin:0\}/);
+  assert.match(spadesSource, /\.sp-room \.hand \.card\[style\*="--hand-row"\]\{grid-row:var\(--hand-row\);grid-column:var\(--hand-column\) \/ span 2\}/);
+  assert.match(spadesSource, /grid-template-columns:repeat\(20,minmax\(0,1fr\)\)/);
+  assert.match(spadesSource, /\.sp-room \.hand \.card\[style\*="--mobile-row"\]\{grid-row:var\(--mobile-row\);grid-column:var\(--mobile-column\) \/ span 2\}/);
+  assert.match(spadesSource, /function handGridPosition\(index, count\)/);
+});
+
 test("Spades keeps the trick table visible on short screens", () => {
   assert.match(spadesSource, /@media\(max-height:520px\)\{#room #bd \.sp-room \.sp\{--w:clamp\(24px,8vh,36px\);padding-bottom:calc\(4px \+ env\(safe-area-inset-bottom,0px\)\)\}#room #bd \.sp-room \.sp \.hand\{padding:12px 8px 8px\}#room #bd \.sp-room \.sp \.msg\{padding:2px 8px;min-height:2\.2em\}\}/);
 });

@@ -261,7 +261,7 @@ test("interactive cards in the new games keep their card dimensions in room UI",
   }
   assert.match(bluffSource, /#room #bd \.bl-room \.hand button\.card:first-child,#room #bd \.bl-room \.hand button\.card:last-child,#room #bd \.bl-room \.hand button\.card\+button\.card\{margin-left:0;margin-right:0\}/,
     "Bluff cards should use the grid layout without overlap margins");
-  for (const source of [cardGameSources[1], cardGameSources[2], cardGameSources[4]])
+  for (const source of [cardGameSources[1], cardGameSources[2]])
     assert.match(source, /#room #bd \.(?:cb|ce-room|hr|sp-room) .*?hand button\.card\+button\.card\{margin-left:calc\(var\(--w\)\*-.45\)\}/,
       "standard card hands should retain their intended overlap");
   assert.match(cardGameSources[3], /@media\(max-width:600px\)\{#room #bd \.hr\{[^}]+\}#room #bd \.hr \.hand\{display:grid;grid-template-columns:repeat\(20,minmax\(0,1fr\)\);grid-auto-rows:calc\(var\(--w\)\*\.95\)/,
@@ -762,6 +762,39 @@ test("Crazy Eights and Spades synchronize actions from hydrated online state", (
     assert.ok(netSource.includes(`setNetGameState(${stateExpression})`),
       `online state restoration should hydrate the game module with ${stateExpression}`);
   }
+});
+
+test("Spades recovers the local bidder seat from the online room order", () => {
+  const peers = ["host", "guest"].map((myId, seat) => createGame("spades.js", {
+    ids: ["host", "guest"],
+    myId,
+    np: 2,
+    seat: 99,
+    localBot: false,
+    gamePlayerNames: ["Host", "Guest"],
+  }));
+  for (const { context } of peers) {
+    context.canAct = () => true;
+  }
+  const state = peers[0].game.init();
+  state.turn = state.t = 0;
+  peers[0].context.S = state;
+  peers[1].game.init();
+  peers[1].game.setState(JSON.parse(JSON.stringify(state)));
+  peers[1].context.S = JSON.parse(JSON.stringify(state));
+
+  const [hostHtml] = peers[0].game.draw();
+  assert.match(hostHtml, /data-m="bid:0"/, "the current host bidder should see bid choices");
+  peers[0].game.click({ dataset: { m: "bid:3" } });
+  assert.equal(JSON.stringify(peers[0].context.lastAction), JSON.stringify({ type: "bid", player: 0, value: 3 }));
+
+  const [guestHtml] = peers[1].game.draw();
+  assert.doesNotMatch(guestHtml, /data-m="bid:/, "the guest should not see the host's bid controls");
+  assert.match(guestHtml, /Host is bidding/);
+  assert.match(hostHtml, /--hand-row:/, "Spades cards should use the wrapped Bluff-style hand layout");
+  assert.match(peers[0].game.draw()[0], /--mobile-row:/, "Spades cards should wrap on mobile like Bluff");
+  assert.equal((hostHtml.match(/--hand-row:/g) || []).length, state.players[0].hand.length,
+    "every card should get an explicit grid position even while bidding");
 });
 
 test("UNO animates a newly drawn card and a card played to the discard pile", () => {

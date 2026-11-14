@@ -275,6 +275,13 @@
   /* ---------- shared room contract ---------- */
   var S = null, roomStyleNode = null, roomAnimationSeq = 0;
   function roomOnline() { return typeof ids !== 'undefined' && ids.length > 0; }
+  function roomLocalSeat() {
+    if (roomOnline() && typeof myId !== 'undefined') {
+      var index = ids.indexOf(myId);
+      if (index >= 0 && index < S.players.length) seat = index;
+    }
+    return typeof seat === 'number' && seat >= 0 && seat < S.players.length ? seat : -1;
+  }
   function roomBotSeat(index) {
     var humans = roomOnline() ? ids.length :
       (typeof localBot !== 'undefined' && localBot ? 1 : Number(np) || 2);
@@ -307,6 +314,17 @@
     return cards;
   }
   function roomSetTurn(index) { S.turn = S.t = index; }
+  function handGridPosition(index, count) {
+    var wideCapacity = 13, mobileCapacity = 8, wideColumns = 30, mobileColumns = 20;
+    var wideRow = Math.floor(index / wideCapacity) + 1, wideStart = (wideRow - 1) * wideCapacity;
+    var wideCount = Math.min(wideCapacity, count - wideStart);
+    var wideColumn = Math.floor((wideColumns - wideCount * 2) / 2) + 1 + (index - wideStart) * 2;
+    var mobileRow = Math.floor(index / mobileCapacity) + 1, mobileStart = (mobileRow - 1) * mobileCapacity;
+    var mobileCount = Math.min(mobileCapacity, count - mobileStart);
+    var mobileColumn = Math.floor((mobileColumns - mobileCount * 2) / 2) + 1 + (index - mobileStart) * 2;
+    return 'style="--hand-row:' + wideRow + ';--hand-column:' + wideColumn +
+      ';--mobile-row:' + mobileRow + ';--mobile-column:' + mobileColumn + '"';
+  }
   function roomNewRound() {
     var hands, valid = false, attempts = 0;
     var playerCount = S.players.length, handSize = Math.floor(52 / playerCount);
@@ -601,26 +619,22 @@
       roomStyleNode.id = 'spades-room-style';
       roomStyleNode.textContent = scopeRoomStyles(CSS, '.sp-room') +
         `#room #bd .sp-room button.card{width:var(--cw);height:calc(var(--cw)*1.45);flex:0 0 var(--cw);margin:0;padding:0;border:var(--edge);border-radius:calc(var(--cw)*.09);background:var(--face);color:var(--k);font:inherit;text-align:left;box-shadow:var(--sh);appearance:none;-webkit-appearance:none;overflow:hidden}
-#room #bd .sp-room .hand button.card:first-child{margin-left:auto}#room #bd .sp-room .hand button.card:last-child{margin-right:auto}
-#room #bd .sp-room .hand{padding-top:28px;padding-bottom:20px;margin-top:5px}
-#room #bd .sp-room .hand button.card+button.card{margin-left:calc(var(--w)*-.45)}
+#room #bd .sp-room .hand{display:grid;grid-template-columns:repeat(30,minmax(0,1fr));grid-auto-rows:calc(var(--w)*.95);align-content:center;justify-items:center;gap:0;overflow:visible;padding:16px 8px calc(10px + var(--w)*.5);margin:5px auto 0;flex:none}
+#room #bd .sp-room .hand .card{grid-column:span 2;justify-self:center;margin:0}
+#room #bd .sp-room .hand .card[style*="--hand-row"]{grid-row:var(--hand-row);grid-column:var(--hand-column) / span 2}
 #room #bd .sp-room .hand{max-width:1160px;margin-left:auto;margin-right:auto}
 #room #bd .sp-room .acts{order:1}#room #bd .sp-room .hand{order:2}#room #bd .sp-room .msg{order:3;margin-top:8px}#room #bd .sp-room .mine{order:4}
 #room #bd .sp-room .sp{box-sizing:border-box;padding-bottom:calc(18px + env(safe-area-inset-bottom,0px))}
 #room #bd .sp-room .sp{box-sizing:border-box;padding-bottom:calc(5vh + env(safe-area-inset-bottom,0px))}
 @media(max-width:600px){#room #bd .sp-room .sp{--w:clamp(36px,min(18vw,calc((100vw - 40px)/7)),76px);box-sizing:border-box;padding-bottom:5vh}#room #bd .sp-room .sp .hand{padding:20px 8px calc(10px + var(--w)*.5 + env(safe-area-inset-bottom,0px))}#room #bd .sp-room .msg{padding-bottom:calc(12px + env(safe-area-inset-bottom,0px))}}
+@media(max-width:1250px){#room #bd .sp-room .sp{--w:clamp(36px,min(8vw,calc((100vw - 56px)/11)),92px)}}
+@media(min-width:601px) and (max-height:700px){#room #bd .sp-room .sp{--w:clamp(32px,min(5vw,10vh),58px)}#room #bd .sp-room .hand{grid-auto-rows:calc(var(--w)*.78);padding:8px 8px calc(6px + var(--w)*.25)}}
+@media(max-width:600px){#room #bd .sp-room .hand{grid-template-columns:repeat(20,minmax(0,1fr));grid-template-rows:none;grid-auto-rows:calc(var(--w)*.95)}#room #bd .sp-room .hand .card{grid-column:span 2}#room #bd .sp-room .hand .card[style*="--mobile-row"]{grid-row:var(--mobile-row);grid-column:var(--mobile-column) / span 2}}
 @media(max-width:520px){#room #bd .sp-room .sp{--w:clamp(32px,11vw,44px)}#room #bd .sp-room .sp .hand{padding-bottom:calc(32px + env(safe-area-inset-bottom,0px))}}
 @media(max-height:520px){#room #bd .sp-room .sp{--w:clamp(32px,13vh,56px)}}
 @media(max-height:520px){#room #bd .sp-room .sp{--w:clamp(24px,8vh,36px);padding-bottom:calc(4px + env(safe-area-inset-bottom,0px))}#room #bd .sp-room .sp .hand{padding:12px 8px 8px}#room #bd .sp-room .sp .msg{padding:2px 8px;min-height:2.2em}}
 @media(max-width:520px) and (max-height:700px){#room #bd .sp-room .sp{--w:clamp(36px,min(12vw,12vh),46px)}#room #bd .sp-room .hand{padding-top:24px}}
-#room #bd .sp-room .sp .hand{display:flex;flex-wrap:nowrap;justify-content:center;overflow:hidden;padding-left:calc(var(--w)*.275);padding-right:calc(var(--w)*.275)}
-#room #bd .sp-room .sp .hand button.card{grid-column:auto;margin-left:calc(var(--w)*-.45)}
-#room #bd .sp-room .sp .hand button.card:first-child{margin-left:0}
-#room #bd .sp-room .sp .hand button.card:last-child{margin-right:0}
-#room #bd .sp-room .sp.players-2,#room #bd .sp-room .sp.players-3{--w:clamp(28px,min(6vw,8vh),56px)}
-#room #bd .sp-room .sp.players-2 .hand,#room #bd .sp-room .sp.players-3 .hand{display:grid;grid-template-columns:repeat(16,minmax(0,1fr));grid-auto-rows:calc(var(--w)*.95);align-content:center;justify-items:center;gap:0;overflow:visible;max-height:none;padding:12px 8px calc(10px + var(--w)*.5)}
-#room #bd .sp-room .sp.players-2 .hand button.card,#room #bd .sp-room .sp.players-3 .hand button.card{grid-column:span 2;margin:0}
-#room #bd .sp-room .sp.players-2 .hand button.card+button.card,#room #bd .sp-room .sp.players-3 .hand button.card+button.card{margin-left:0}` +
+@media(max-height:520px){#room #bd .sp-room .sp{--w:clamp(24px,8vh,36px);padding-bottom:calc(4px + env(safe-area-inset-bottom,0px))}#room #bd .sp-room .hand{grid-auto-rows:calc(var(--w)*.78);padding:8px 8px 8px}#room #bd .sp-room .msg{padding:2px 8px;min-height:2.2em}}` +
         '#bd .sp-room .sp button{width:auto;margin:0}#bd .sp-room .sp .btn{font:inherit;font-weight:800;padding:.6em 1.2em;border:0;border-radius:999px;background:#ffd45c;color:#121a2c;cursor:pointer}' +
         '@media(prefers-reduced-motion:reduce){.sp-room *,.sp-room *::before,.sp-room *::after{animation:none!important;transition:none!important}}';
       document.head.appendChild(roomStyleNode);
@@ -635,7 +649,7 @@
         }).join('') + '</div></section></div></div>', S.msg];
     }
     var playerCount = S.players.length, online = roomOnline(), currentIndex = online
-      ? (typeof seat === 'number' && seat >= 0 && seat < playerCount ? seat : -1)
+      ? roomLocalSeat()
       : 0;
     var teamIndex = currentIndex >= 0 ? (playerCount === 4 ? currentIndex % 2 : currentIndex) : 0;
     var player = currentIndex >= 0 ? S.players[currentIndex] : null;
@@ -684,10 +698,11 @@
       '</small></div><div class="mine">' + (player ? roomEscape(player.name) + ': ' +
         (player.bid === null ? 'no bid yet' : bidTxt(player)) : 'Waiting for your turn') + '</div><div class="hand">';
     if (player) player.hand.slice().sort(function (a, b) { return SUITS.indexOf(a.s) - SUITS.indexOf(b.s) || b.r - a.r; })
-      .forEach(function (card) {
+      .forEach(function (card, index) {
         var allowed = active && S.phase === 'play' && !S.collect &&
           roomLegal(player.hand, S.trick, S.broken).some(function (item) { return item.id === card.id; });
-        html += cardHTML(card, allowed ? ' ok' : ' no', allowed ? 'data-m="card:' + card.id + '"' : '');
+        html += cardHTML(card, allowed ? ' ok' : ' no', (allowed ? 'data-m="card:' + card.id + '"' : '') +
+          ' ' + handGridPosition(index, player.hand.length));
       });
     html += '</div>';
     if (active && S.collect) html += '<div class="acts"><button class="btn" data-m="collect">Collect trick</button></div>';
@@ -708,6 +723,7 @@
   }
   function roomClick(element) {
     if (!S || !element || !element.dataset || S.over) return;
+    roomLocalSeat();
     var command = element.dataset.m || '', action = null;
     if (command.indexOf('players:') === 0) action = { type: 'players', player: S.t, count: Number(command.slice(8)) };
     else if (command.indexOf('bid:') === 0) action = { type: 'bid', player: S.t, value: Number(command.slice(4)) };
