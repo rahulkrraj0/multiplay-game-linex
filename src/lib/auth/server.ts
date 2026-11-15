@@ -70,16 +70,41 @@ const env = (key: string): string | undefined => {
   return value ? value : undefined;
 };
 
+const isProduction = process.env.NODE_ENV === "production";
+const explicitBaseURL = env("BETTER_AUTH_URL");
+const authSecret = env("BETTER_AUTH_SECRET");
+const configuredGrokClientId = env("GROK_AUTH_CLIENT_ID");
+const configuredGrokClientSecret = env("GROK_AUTH_CLIENT_SECRET");
+
+if (isProduction) {
+  if (!authSecret || authSecret.length < 32) {
+    throw new Error(
+      "[auth] BETTER_AUTH_SECRET must be set to at least 32 characters in production.",
+    );
+  }
+  if (
+    !explicitBaseURL ||
+    !URL.canParse(explicitBaseURL) ||
+    new URL(explicitBaseURL).protocol !== "https:"
+  ) {
+    throw new Error("[auth] BETTER_AUTH_URL must be an HTTPS URL in production.");
+  }
+  if (!configuredGrokClientId || !configuredGrokClientSecret) {
+    throw new Error(
+      "[auth] GROK_AUTH_CLIENT_ID and GROK_AUTH_CLIENT_SECRET must be set in production.",
+    );
+  }
+}
+
 // Explicit off-switch. The deployer sets `VITE_AUTH_ENABLED=true` when it
 // provisions auth; set it to "false" to force auth off everywhere (dev user).
 const authDisabled = env("VITE_AUTH_ENABLED") === "false";
 
-// Broker federation creds: the deployer injects a per-app client when deployed;
-// otherwise fall back to the shared live-preview client, which the broker accepts
-// for any `*.grok-sandbox.com` callback (see `./preview`).
+// The shared preview client is only used outside production.
 const grokIssuer = env("GROK_AUTH_ISSUER") ?? GROK_ISSUER_DEFAULT;
-const grokClientId = env("GROK_AUTH_CLIENT_ID") ?? PREVIEW_CLIENT_ID;
-const grokClientSecret = env("GROK_AUTH_CLIENT_SECRET") ?? PREVIEW_CLIENT_SECRET;
+const grokClientId = configuredGrokClientId ?? (isProduction ? undefined : PREVIEW_CLIENT_ID);
+const grokClientSecret =
+  configuredGrokClientSecret ?? (isProduction ? undefined : PREVIEW_CLIENT_SECRET);
 
 /** True when federated sign-in is active (real auth is enforced). */
 export const authConfigured =
@@ -91,7 +116,6 @@ export const authConfigured =
 // it derives the origin per-request from the (proxied) host, validated against the
 // preview allowlist, which makes the OAuth `redirect_uri` the concrete preview URL
 // the broker's preview client accepts.
-const explicitBaseURL = env("BETTER_AUTH_URL");
 // Explicit `string[]` (not a readonly tuple) — Better Auth's DynamicBaseURLConfig
 // requires a mutable `allowedHosts: string[]`.
 const previewAllowedHosts: string[] = [...PREVIEW_ALLOWED_HOSTS];
@@ -176,7 +200,7 @@ export const auth = betterAuth({
   baseURL,
   // Deployed apps inject BETTER_AUTH_SECRET. Preview: process-stable secret on
   // globalThis so HMR doesn't invalidate PGLite-backed sessions (see above).
-  secret: env("BETTER_AUTH_SECRET") ?? previewAuthSecret(),
+  secret: authSecret ?? previewAuthSecret(),
   database,
 
   // CSRF / origin check for credentialed auth POSTs (email sign-up/sign-in, …).

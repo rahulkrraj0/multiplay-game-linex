@@ -81,10 +81,13 @@ Set these values, replacing the example domain and address with your own:
 POSTGRES_USER=multiplay
 POSTGRES_DB=multiplay
 POSTGRES_PASSWORD=YOUR_NEW_POSTGRES_SECRET
-BETTER_AUTH_SECRET=YOUR_DIFFERENT_AUTH_SECRET
+BETTER_AUTH_SECRET=YOUR_DIFFERENT_RANDOM_SECRET
 
 VITE_PUBLIC_SITE_URL=https://play.yourdomain.com
 BETTER_AUTH_URL=https://play.yourdomain.com
+GROK_AUTH_ISSUER=https://auth.grok.me
+GROK_AUTH_CLIENT_ID=YOUR_DEDICATED_APP_CLIENT_ID
+GROK_AUTH_CLIENT_SECRET=YOUR_DEDICATED_APP_CLIENT_SECRET
 
 TURN_HOSTNAME=turn.yourdomain.com
 TURN_EXTERNAL_IP=YOUR_LINUX_SERVER_PUBLIC_IPV4
@@ -99,6 +102,12 @@ Use the actual public IPv4 address assigned to the Linux server for
 `TURN_EXTERNAL_IP`. Do not reuse the `.env` or database from the Windows
 Docker Desktop setup unless you deliberately want to reuse its secrets and
 migrate its database.
+
+Obtain a dedicated OAuth client ID and secret for this deployed app from the
+auth broker; the shared live-preview client is not valid for production. The
+app will refuse to start in production if the auth secret (at least 32
+characters), HTTPS auth URL, or dedicated OAuth client credentials are missing.
+Incorrect OAuth client credentials will prevent sign-in from succeeding.
 
 Never commit `.env` or share its secrets.
 
