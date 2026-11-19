@@ -18,6 +18,9 @@ services:
         condition: service_healthy
     ports:
       - "127.0.0.1:8080:8080"
+    networks:
+      - default
+      - turn_network
     restart: unless-stopped
     healthcheck:
       test:
@@ -74,9 +77,9 @@ services:
       - --denied-peer-ip=127.0.0.0-127.255.255.255
       - --denied-peer-ip=169.254.0.0-169.254.255.255
     ports:
-      - "${TURN_BIND_IP:-127.0.0.1}:3478:3478/tcp"
-      - "${TURN_BIND_IP:-127.0.0.1}:3478:3478/udp"
-      - "${TURN_BIND_IP:-127.0.0.1}:49160-49200:49160-49200/udp"
+      - "${TURN_BIND_IP:-0.0.0.0}:3478:3478/tcp"
+      - "${TURN_BIND_IP:-0.0.0.0}:3478:3478/udp"
+      - "${TURN_BIND_IP:-0.0.0.0}:49160-49200:49160-49200/udp"
     networks:
       turn_network:
         ipv4_address: 10.255.233.10

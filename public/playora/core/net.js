@@ -2,7 +2,7 @@
    so every attendee is both server and receiver. The lowest-numbered attendee is the host (starts/restarts games);
    if the host leaves, the next player becomes host automatically and the game carries on.
    New players need one copy-paste code exchange with ANY connected player; the rest of the links form by themselves. */
-const CFG={iceServers:(window.PLAYORA&&PLAYORA.iceServers)||[{urls:'stun:stun.l.google.com:19302'}]},myId=Math.random().toString(36).slice(2,8);
+const CFG={iceServers:(window.PLAYORA&&PLAYORA.iceServers)||[{urls:'stun:stun.l.google.com:19302'}],bundlePolicy:'max-bundle',iceCandidatePoolSize:2},myId=Math.random().toString(36).slice(2,8);
 const PLAYER_KEY_STORAGE='playora.player-key.v1';
 const PREVIOUS_GAME_PREFIX='playora.previous-game.v1.';
 function getPlayerKey(){try{const saved=localStorage.getItem(PLAYER_KEY_STORAGE);if(saved&&/^[a-f0-9]{16}$/i.test(saved))return saved;const key=[...crypto.getRandomValues(new Uint8Array(8))].map(x=>x.toString(16).padStart(2,'0')).join('');localStorage.setItem(PLAYER_KEY_STORAGE,key);return key}catch(error){console.warn('[playora] Could not persist this browser’s player identity.',error);return[...Array(16)].map(()=>Math.floor(Math.random()*16).toString(16)).join('')}}
@@ -31,7 +31,7 @@ function updateResumePreviousButton(){const button=$('resumePreviousGame');if(bu
 function sharePreviousGameSnapshot(){const snapshot=readPreviousGame();if(snapshot)peers().forEach(C=>snd(C,{k:'previous-game',snapshot}))}
 function acceptPreviousGameSnapshot(C,snapshot){if(!amHost()||!C.playerKey||!validPreviousGame(snapshot,room.code)||!snapshot.playerKeys.includes(C.playerKey))return;const current=readPreviousGame();if(current&&(current.game!==snapshot.game||current.playerKeys.join('\0')!==snapshot.playerKeys.join('\0')||(current.savedAt||0)>=(snapshot.savedAt||0)))return;if(writePreviousGame(snapshot))updateResumePreviousButton()}
 const enc=d=>btoa(JSON.stringify(d)),dec=s=>JSON.parse(atob(s.trim()));
-const gath=pc=>Promise.race([new Promise(r=>{let done=0;const finish=()=>{if(!done){done=1;r()}};if(pc.iceGatheringState==='complete')return finish();pc.addEventListener('icegatheringstatechange',()=>{if(pc.iceGatheringState==='complete')finish()});pc.addEventListener('icecandidate',e=>{if(!e.candidate)finish()})}),new Promise(r=>setTimeout(r,4000))]);
+const gath=pc=>Promise.race([new Promise(r=>{let done=0;const finish=()=>{if(!done){done=1;r()}};if(pc.iceGatheringState==='complete')return finish();pc.addEventListener('icegatheringstatechange',()=>{if(pc.iceGatheringState==='complete')finish()});pc.addEventListener('icecandidate',e=>{if(!e.candidate)finish()})}),new Promise(r=>setTimeout(r,2500))]);
 const snd=(C,o)=>{if(C&&C.dc&&C.dc.readyState==='open')C.dc.send(JSON.stringify(o))},bcast=(o,ex)=>cs.forEach(C=>C!==ex&&snd(C,o));
 const peers=()=>cs.filter(C=>C.open&&C.id),hostSeat=()=>Math.min(js,...peers().map(C=>C.seat)),amHost=()=>js===hostSeat();
 const ready=()=>{const n=peers().length;return n>0&&peers().every(C=>rep[C.id]===n)};

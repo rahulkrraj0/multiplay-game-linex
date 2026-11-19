@@ -45,7 +45,7 @@ async function sgn(ws, type, dst, payload) {
     room: ws.rtcRoom,
     from: ws.id,
     to: dst,
-    kind: type === "ANSWER" ? "answer" : "offer",
+    kind: type === "ICE" ? "ice" : type === "ANSWER" ? "answer" : "offer",
     payload,
   });
   let err;
@@ -96,7 +96,7 @@ function sigOpen(id, onmsg, rtcRoom) {
           continue;
         }
       }
-      out.push({ type: sig.kind === "answer" ? "ANSWER" : "OFFER", src: sig.from, payload: payload || {} });
+      out.push({ type: sig.kind === "answer" ? "ANSWER" : sig.kind === "ice" ? "ICE" : "OFFER", src: sig.from, payload: payload || {} });
     }
     return out;
   };
@@ -132,7 +132,7 @@ function sigOpen(id, onmsg, rtcRoom) {
         }
       }
       if (sess.closed) return;
-      sess.hb = setInterval(() => void tick(), 2000);
+      sess.hb = setInterval(() => void tick(), 500);
       resolve(sess);
       setTimeout(() => dispatch(first), 0);
     })();
@@ -263,7 +263,23 @@ function hostMsg(m) {
   if (m.type === "OFFER" && p.k === "join") admit(m.src);
   if (m.type === "ANSWER" && p.k === "answer") {
     const C = room.pend[m.src];
-    if (C) C.pc.setRemoteDescription(p.sdp).catch(() => {});
+    if (C) {
+      C.pc.setRemoteDescription(p.sdp).then(() => {
+        const ice = C.pendingIce || [];
+        C.pendingIce = [];
+        for (const cand of ice) C.pc.addIceCandidate(cand).catch(() => {});
+      }).catch(() => {});
+    }
+  }
+  if (m.type === "ICE" && p.k === "ice" && p.candidate) {
+    const C = room.pend[m.src];
+    if (C) {
+      if (C.pc.remoteDescription) {
+        C.pc.addIceCandidate(new RTCIceCandidate(p.candidate)).catch(() => {});
+      } else {
+        (C.pendingIce = C.pendingIce || []).push(new RTCIceCandidate(p.candidate));
+      }
+    }
   }
 }
 async function roomHostAvailable(code) {
@@ -294,8 +310,14 @@ async function admit(src) {
   if (peers().length + 1 + pending >= ROOM_MAX) return sgn(room.ws, "OFFER", src, { k: "full" });
   const C = mkC(null, null);
   C.adm = 1;
+  C.pendingIce = [];
   room.pend[src] = C;
   wire(C, C.pc.createDataChannel("g"));
+  C.pc.onicecandidate = (e) => {
+    if (e.candidate && room.ws && !room.ws.closed) {
+      sgn(room.ws, "ICE", src, { k: "ice", candidate: e.candidate.toJSON() }).catch(() => {});
+    }
+  };
   try {
     await C.pc.setLocalDescription(await C.pc.createOffer());
     await gath(C.pc);
@@ -452,9 +474,18 @@ async function joinRoom(raw, reconnectInPlace = false) {
           jmsg("Lobby found — finishing connection… Please wait.");
           const C = (room.jc = mkC(null, null));
           C.first = 1;
+          C.pendingIce = [];
           C.pc.ondatachannel = (e) => wire(C, e.channel);
+          C.pc.onicecandidate = (e) => {
+            if (e.candidate && ws && !ws.closed) {
+              sgn(ws, "ICE", host, { k: "ice", candidate: e.candidate.toJSON() }).catch(() => {});
+            }
+          };
           try {
             await C.pc.setRemoteDescription(p.sdp);
+            const ice = C.pendingIce || [];
+            C.pendingIce = [];
+            for (const cand of ice) C.pc.addIceCandidate(cand).catch(() => {});
             await C.pc.setLocalDescription(await C.pc.createAnswer());
             await gath(C.pc);
             await sgn(ws, "ANSWER", host, { k: "answer", sdp: C.pc.localDescription });
@@ -462,6 +493,16 @@ async function joinRoom(raw, reconnectInPlace = false) {
             jfail("Could not set up the connection. Please try again.");
           }
 
+        }
+        if (m.type === "ICE" && p.k === "ice" && p.candidate) {
+          const C = room.jc;
+          if (C) {
+            if (C.pc.remoteDescription) {
+              C.pc.addIceCandidate(new RTCIceCandidate(p.candidate)).catch(() => {});
+            } else {
+              (C.pendingIce = C.pendingIce || []).push(new RTCIceCandidate(p.candidate));
+            }
+          }
         }
       },
       rtcKey(code),
