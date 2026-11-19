@@ -264,10 +264,11 @@ function authPopupPlugin(): Plugin {
 // AGENTS.md § "First scaffold".
 export default defineConfig(({ command, isPreview, mode }) => {
   const env = loadEnv(mode, process.cwd(), "VITE_");
-  const siteOrigin = resolvePublicSiteOrigin(
-    env.VITE_PUBLIC_SITE_URL,
-    process.env.VERCEL_PROJECT_PRODUCTION_URL,
-  );
+  const siteOrigin =
+    resolvePublicSiteOrigin(
+      env.VITE_PUBLIC_SITE_URL,
+      process.env.VERCEL_PROJECT_PRODUCTION_URL,
+    ) ?? "https://gameslord.online";
   return {
     define: {
       "import.meta.env.VITE_PUBLIC_SITE_URL": JSON.stringify(siteOrigin ?? ""),
